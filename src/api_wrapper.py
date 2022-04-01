@@ -9,7 +9,8 @@ class SemanticSearchApi():
     def __init__(self, api_key_file):
         self.client = self._initialize_client(api_key_file)
         self.bq_tweet_table = 'nwo-sample.graph.tweets'
-        self.sample_prob = 0.00000001
+        self.table_sample_prob = 1e-8 # returns about 1 million rows
+        self.rand_sample_prob = 0.001
         
         self.tweet_dict = {}
 
@@ -35,7 +36,8 @@ class SemanticSearchApi():
             SELECT *
             FROM {}
             TABLESAMPLE SYSTEM({} PERCENT)
-            """.format(bq_table, self.sample_prob)
+            WHERE RAND() < {}
+            """.format(bq_table, self.table_sample_prob, self.rand_sample_prob)
         query_job = self.client.query(query_string)
         results = query_job.result() 
 
@@ -58,8 +60,9 @@ class SemanticSearchApi():
                     self.tweet_dict[word].append(tweet)
             i += 1
             print(i)
+
         # populate tweet table here
-        print(self.tweet["america"])
+        print(self.tweet_dict["america"])
 
     # JSONifies ranked trends in results
     def _jsonify(self, results):
