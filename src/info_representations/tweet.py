@@ -9,7 +9,7 @@ class Tweet:
     def __init__(self, id, datestring, text):
         self.id = id
         self.datetime = datetime.strptime(datestring, "%Y-%m-%d %H:%M:%S")
-        self.text = self._preprocess_text(text)
+        self.words = self._preprocess_text(text)
 
     def _preprocess_text(self, text):
         text = re.sub(r'pic.twitter.com/\S+',"", text)
