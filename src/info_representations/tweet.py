@@ -1,7 +1,7 @@
 from datetime import datetime
-import nltk
-from string import punctuation
+from nltk import tokenize, corpus
 import re
+from cleantext import clean
 
 class Tweet:
     # TODO: use __slots__ to decrease memory usage 
@@ -11,31 +11,33 @@ class Tweet:
         self.datetime = datetime.strptime(datestring, "%Y-%m-%d %H:%M:%S")
         self.text = self._preprocess_text(text)
 
-    # TODO: make this more efficient 
     def _preprocess_text(self, text):
-        # remove punctuation
-        def remove_punctuation(s):
-            all_punctuation = punctuation + [u'\u201c',u'\u201d',u'\u2018',u'\u2019']
-            return ''.join(c for c in s if c not in all_punctuation) 
+        text = re.sub(r'pic.twitter.com/\S+',"", text)
+        text = clean(text,
+            fix_unicode=True,               
+            to_ascii=True,              
+            lower=True,                    
+            no_line_breaks=False,  
+            no_emoji=True,    
+            no_urls=True,            
+            no_emails=True,            
+            no_phone_numbers=True,       
+            no_numbers=False,             
+            no_digits=False,             
+            no_currency_symbols=True,    
+            no_punct=True,
+            replace_with_url="",
+            replace_with_email="",
+            replace_with_phone_number="",
+            replace_with_number="",
+            replace_with_punct="",        
+        )
 
-        # make lowercase letters
-        def to_lower(s):
-            return ''.join([c.lower() for c in s])
+        words = tokenize.word_tokenize(text)
 
-        # remove hyperlinks
-        def remove_links(s):
-            # TODO: remove links to pictures
-            s = re.sub(r"http\S+", "", s)
-            s = re.sub(r'pic.twitter.com/\S+',"", s)
-            return s
-
-        text = remove_links(text)
-        text = to_lower(remove_punctuation(text))
-        words = nltk.tokenize.word_tokenize(text)
-        print(words)
-
-        # make lowercase letters
-
-        # remove links
-
-        return []
+        cleaned_words = []
+        for w in words:
+            if w not in corpus.stopwords.words("english"):
+                cleaned_words.append(w)
+  
+        return cleaned_words

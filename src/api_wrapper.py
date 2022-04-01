@@ -9,7 +9,7 @@ class SemanticSearchApi():
     def __init__(self, api_key_file):
         self.client = self._initialize_client(api_key_file)
         self.bq_tweet_table = 'nwo-sample.graph.tweets'
-        self.sample_prob = 0.0000001
+        self.sample_prob = 0.00000001
         
         self.tweet_dict = {}
 
@@ -40,10 +40,26 @@ class SemanticSearchApi():
         results = query_job.result() 
 
         # create Tweets and populate the tweet table
+        i = 0
         for row in results:
             tweet = Tweet(row.tweet_id, row.created_at, row.tweet)
-        
+
+            # don't count any word more than once
+            tweet_words = {}
+            for word in tweet.text:
+                if word not in tweet_words:
+                    tweet_words[word] = True
+
+            # add words in tweet to dictionary
+            for word in tweet_words:
+                if word not in self.tweet_dict:
+                    self.tweet_dict[word] = [tweet]
+                else:
+                    self.tweet_dict[word].append(tweet)
+            i += 1
+            print(i)
         # populate tweet table here
+        print(self.tweet["america"])
 
     # JSONifies ranked trends in results
     def _jsonify(self, results):
