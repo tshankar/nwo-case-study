@@ -2,6 +2,7 @@ import json
 import os
 from attr import assoc
 from google.cloud import bigquery
+from datetime import datetime
 
 from .info_representations.tweet import Tweet
 
@@ -15,38 +16,48 @@ class SemanticSearchApi():
         
         self.tweet_dict = {}
 
-
     def _initialize_client(self, api_key_file):
         os.environ['GOOGLE_APPLICATION_CREDENTIALS']=api_key_file
         return bigquery.Client()
 
     def get_trends(self, query):
+        now = datetime.now() # TODO: confirm whether this is UTC time or not
+
+        def recency_weighted_score(tweet):
+            seconds_passed = (now - tweet.datetime).total_seconds()
+            weight = 1 / seconds_passed # not small enough to have floating point issues 
+            for word in tweet.words:
+                if word != query:
+                    if word not in word_scores:
+                        word_scores[word] = weight
+                    else:
+                        word_scores[word] += weight
+
         # populate dictionary of sampled tweets if does not exist
         if not self.tweet_dict:
             self._get_tweets(self.bq_tweet_table)
 
         query_count = 0
-        associated_word_count = {}
         # TODO: what if query does not exist in dict
         if query in self.tweet_dict:
             query_tweet_list = self.tweet_dict[query]
 
             # get tweet count of query word
             query_count = len(query_tweet_list)
+            word_scores = {}
 
-            # get tweet count of related words, assuming query word exists in dictionary
-            associated_word_count = {}
+            # get recency weighted score of associated words
             for tweet in query_tweet_list:
-                for word in tweet.words: # each word should already be counted only once per tweet
-                    print(word)
-                    if word != query:
-                        if word not in associated_word_count:
-                            associated_word_count[word] = 1
-                        else:
-                            associated_word_count[word] += 1
+                recency_weighted_score(tweet)                    
 
-        # calculate the confidence in related words
-        print(associated_word_count)
+            # normalize by query count
+            word_scores = {w: s / query_count for w, s in word_scores.items()}
+
+            # sort by score
+            word_score_list = sorted(word_scores.items(), key=lambda x: x[1], reverse=True)
+            for t in word_score_list:
+                print(t)
+            
 
     # TODO: check for correct API key and throw error if not
     def _get_tweets(self, bq_table):
@@ -79,7 +90,6 @@ class SemanticSearchApi():
                     self.tweet_dict[word].append(tweet)
             i += 1
             if (i % 1000 == 0): print(i)
-
 
     # JSONifies ranked trends in results
     def _jsonify(self, results):
