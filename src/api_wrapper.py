@@ -1,6 +1,5 @@
 import json
 import os
-from attr import assoc
 from google.cloud import bigquery
 from datetime import datetime
 
@@ -15,6 +14,7 @@ class SemanticSearchApi():
         self.rand_sample_prob = 0.01
         
         self.tweet_dict = {}
+        self.top_k = 10
 
     def _initialize_client(self, api_key_file):
         os.environ['GOOGLE_APPLICATION_CREDENTIALS']=api_key_file
@@ -53,11 +53,12 @@ class SemanticSearchApi():
             # normalize by query count
             word_scores = {w: s / query_count for w, s in word_scores.items()}
 
-            # sort by score
+            # sort by score and get top k words
             word_score_list = sorted(word_scores.items(), key=lambda x: x[1], reverse=True)
-            for t in word_score_list:
-                print(t)
-            
+            top_k_word_scores = word_score_list[:self.top_k]
+
+            # get json representation of words
+            print(self._jsonify(query, top_k_word_scores))
 
     # TODO: check for correct API key and throw error if not
     def _get_tweets(self, bq_table):
@@ -92,6 +93,18 @@ class SemanticSearchApi():
             if (i % 1000 == 0): print(i)
 
     # JSONifies ranked trends in results
-    def _jsonify(self, results):
-        pass
+    def _jsonify(self, query, word_scores):
+        json_string = "{"
+        json_string += "\"{}\": {{\n".format(query)
+        json_string += "\"top_{}_words\": {{\n".format(self.top_k)
+        for i in range(len(word_scores)):
+            (word, _) = word_scores[i]
+            json_string += "\"{}\": \"{}\"".format(i, word)
+            if i < len(word_scores) - 1:
+                json_string += ","
+            json_string += "\n"
+        json_string += "}\n}\n}"
+        return json_string
+        
+
     
