@@ -16,13 +16,20 @@ class SemanticSearchApi():
         self.tweet_dict = {}
         self.top_k = 10
 
+    """ Initializes BigQuery client with provided API key """
     def _initialize_client(self, api_key_file):
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS']=api_key_file
-        return bigquery.Client()
+        try:
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS']=api_key_file
+            return bigquery.Client()
+        except:
+            print("Error: Cannot initialize BigQuery client. Please check provided credentials.")
+            sys.exit(1)
 
+    """ Retrieves top k trending words associated with the provided query word """
     def get_trends(self, query):
         now = datetime.now() # TODO: confirm whether this is UTC time or not
 
+        # computes score of each word in the provided tweet based on its recency 
         def recency_weighted_score(tweet):
             seconds_passed = (now - tweet.datetime).total_seconds()
             weight = 1 / seconds_passed # not small enough to have floating point issues 
@@ -36,9 +43,8 @@ class SemanticSearchApi():
         # populate dictionary of sampled tweets if does not exist
         if not self.tweet_dict:
             self._get_tweets(self.bq_tweet_table)
-
         query_count = 0
-        # TODO: what if query does not exist in dict
+        top_k_word_scores = []
         if query in self.tweet_dict:
             query_tweet_list = self.tweet_dict[query]
 
@@ -56,54 +62,61 @@ class SemanticSearchApi():
             # sort by score and get top k words
             word_score_list = sorted(word_scores.items(), key=lambda x: x[1], reverse=True)
             top_k_word_scores = word_score_list[:self.top_k]
+        else:
+            print("query not in dict")
+        # get json representation of words
+        print(self._jsonify(query, top_k_word_scores))
+        #return self._jsonify(query, top_k_word_scores)
 
-            # get json representation of words
-            print(self._jsonify(query, top_k_word_scores))
-
-    # TODO: check for correct API key and throw error if not
+    """ Performs query to retrieve tweets from BigQuery """
     def _get_tweets(self, bq_table):
-        query_string = \
-            """
-            SELECT *
-            FROM {}
-            TABLESAMPLE SYSTEM({} PERCENT)
-            WHERE RAND() < {}
-            """.format(bq_table, self.table_sample_prob, self.rand_sample_prob)
-        query_job = self.client.query(query_string)
-        results = query_job.result() 
+        try:
+            query_string = \
+                """
+                SELECT *
+                FROM {}
+                TABLESAMPLE SYSTEM({} PERCENT)
+                WHERE RAND() < {}
+                """.format(bq_table, self.table_sample_prob, self.rand_sample_prob)
+            query_job = self.client.query(query_string)
+            results = query_job.result() 
 
-        # create Tweets and populate the tweet table
-        i = 0
-        for row in results:
-            tweet = Tweet(row.tweet_id, row.created_at, row.tweet)
+            # create Tweets and populate the tweet table
+            i = 0
+            for row in results:
+                tweet = Tweet(row.tweet_id, row.created_at, row.tweet)
+                # count every word only once per tweet 
+                tweet_words = {}
+                for word in tweet.words:
+                    if word not in tweet_words:
+                        tweet_words[word] = True
 
-            # count every word only once per tweet 
-            tweet_words = {}
-            for word in tweet.words:
-                if word not in tweet_words:
-                    tweet_words[word] = True
+                # add words in tweet to dictionary
+                for word in tweet_words:
+                    if word not in self.tweet_dict:
+                        self.tweet_dict[word] = [tweet]
+                    else:
+                        self.tweet_dict[word].append(tweet)
+                i += 1
+                if (i % 1000 == 0): 
+                    print("Retrieved {} tweets".format(i))
+        except: 
+            print("Error: Could not retrieve data from BigQuery table: {}".format(bq_table))
+        print(len(self.tweet_dict))
 
-            # add words in tweet to dictionary
-            for word in tweet_words:
-                if word not in self.tweet_dict:
-                    self.tweet_dict[word] = [tweet]
-                else:
-                    self.tweet_dict[word].append(tweet)
-            i += 1
-            if (i % 1000 == 0): print(i)
-
-    # JSONifies ranked trends in results
+    """Creates JSON object mapping query to the top_k associated words """
     def _jsonify(self, query, word_scores):
         json_string = "{"
         json_string += "\"{}\": {{\n".format(query)
-        json_string += "\"top_{}_words\": {{\n".format(self.top_k)
+        json_string += "\"top_{}_words\": [\n".format(self.top_k)
         for i in range(len(word_scores)):
             (word, _) = word_scores[i]
-            json_string += "\"{}\": \"{}\"".format(i, word)
+            json_string += "\"{}\"".format(word)
             if i < len(word_scores) - 1:
                 json_string += ","
             json_string += "\n"
-        json_string += "}\n}\n}"
+        json_string += "]"
+        json_string += "\n}\n}"
         return json_string
         
 
