@@ -24,7 +24,9 @@ For example, given query input `biden`, the response might be:
 }
 ```
 ## Algorithm
-The current implementation takes inspiration from association rule mining. Specifically, the association of word `w` with the query word `q` can be measured by two metrics: 
+The current implementation takes inspiration from association rule mining and uses Twitter data to determine the association of the word `w` with the query word `q`
+
+Specifically, the association of `w` and `q` can be measured by two metrics: 
 1) The frequency with which both words co-occurred in tweets
 2) The recency of the tweets in which they co-occurred
 
@@ -33,6 +35,8 @@ Let T represent the set of tweets in which `w` and `q` co-occur. To calculate th
 $score(w, q) = \frac{\sum_{w \in T}(weight(w))}{count(q)}$
 
 Each word `w` scored is only counted once per tweet, and only if it is not the query word. 
+
+Instead of querying BigQuery directly for each input word, ~70k tweets are sampled randomly from the BigQuery table upon the first query and are cached for following queries. 
 
 ## Setup
 ### Dependencies

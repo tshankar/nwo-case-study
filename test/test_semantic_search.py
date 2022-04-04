@@ -1,4 +1,4 @@
-### pytest unit tests ###
+### Testing Module ###
 
 # Tests that no query is run if incorrect API key passed in
 def test_incorrect_api_key():
@@ -16,7 +16,7 @@ def test_json_format():
 def test_json_output():
     pass
 
-# Tests for correct error handling on timeout
+# Tests for correct error handling on BigQuery timeout
 def test_timeout():
     pass
 

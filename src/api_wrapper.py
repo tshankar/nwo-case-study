@@ -14,7 +14,7 @@ class SemanticSearchApi():
         self.table_sample_prob = 1e-6 
         self.rand_sample_prob = 0.05
         
-        self.tweet_dict = {}
+        self.tweet_dict = {} 
         self.top_k = 10
 
     """ Initializes BigQuery client with provided API key """
@@ -81,7 +81,7 @@ class SemanticSearchApi():
             query_job = self.client.query(query_string)
             results = query_job.result() 
 
-            # create Tweets and populate the tweet table
+            # create Tweets and populate the tweet dictionary
             i = 0
             for row in results:
                 tweet = Tweet(row.tweet_id, row.created_at, row.tweet)
