@@ -1,17 +1,18 @@
-import json
-import os
-from google.cloud import bigquery
 from datetime import datetime
+from google.cloud import bigquery
+import os
+import sys
+
 
 from .info_representations.tweet import Tweet
 
-# Defines API wrapper class for the semantic search algorithm
+### API wrapper for the semantic search algorithm ###
 class SemanticSearchApi():
     def __init__(self, api_key_file):
         self.client = self._initialize_client(api_key_file)
         self.bq_tweet_table = 'nwo-sample.graph.tweets'
         self.table_sample_prob = 1e-6 
-        self.rand_sample_prob = 0.01
+        self.rand_sample_prob = 0.05
         
         self.tweet_dict = {}
         self.top_k = 10
@@ -27,12 +28,12 @@ class SemanticSearchApi():
 
     """ Retrieves top k trending words associated with the provided query word """
     def get_trends(self, query):
-        now = datetime.now() # TODO: confirm whether this is UTC time or not
+        now = datetime.now() 
 
-        # computes score of each word in the provided tweet based on its recency 
-        def recency_weighted_score(tweet):
+        # computes score of each word in the provided tweet based on recency 
+        def score(tweet):
             seconds_passed = (now - tweet.datetime).total_seconds()
-            weight = 1 / seconds_passed # not small enough to have floating point issues 
+            weight = 1 / seconds_passed 
             for word in tweet.words:
                 if word != query:
                     if word not in word_scores:
@@ -43,6 +44,7 @@ class SemanticSearchApi():
         # populate dictionary of sampled tweets if does not exist
         if not self.tweet_dict:
             self._get_tweets(self.bq_tweet_table)
+
         query_count = 0
         top_k_word_scores = []
         if query in self.tweet_dict:
@@ -54,7 +56,7 @@ class SemanticSearchApi():
 
             # get recency weighted score of associated words
             for tweet in query_tweet_list:
-                recency_weighted_score(tweet)                    
+                score(tweet)                    
 
             # normalize by query count
             word_scores = {w: s / query_count for w, s in word_scores.items()}
@@ -62,11 +64,9 @@ class SemanticSearchApi():
             # sort by score and get top k words
             word_score_list = sorted(word_scores.items(), key=lambda x: x[1], reverse=True)
             top_k_word_scores = word_score_list[:self.top_k]
-        else:
-            print("query not in dict")
+                    
         # get json representation of words
-        print(self._jsonify(query, top_k_word_scores))
-        #return self._jsonify(query, top_k_word_scores)
+        return self._jsonify(query, top_k_word_scores)
 
     """ Performs query to retrieve tweets from BigQuery """
     def _get_tweets(self, bq_table):
@@ -102,22 +102,25 @@ class SemanticSearchApi():
                     print("Retrieved {} tweets".format(i))
         except: 
             print("Error: Could not retrieve data from BigQuery table: {}".format(bq_table))
-        print(len(self.tweet_dict))
 
     """Creates JSON object mapping query to the top_k associated words """
     def _jsonify(self, query, word_scores):
-        json_string = "{"
-        json_string += "\"{}\": {{\n".format(query)
-        json_string += "\"top_{}_words\": [\n".format(self.top_k)
+        def indent(n):
+            return n * "\t"
+
+        json_string = "{\n"
+        json_string += "{}\"{}\": {{\n".format(indent(1), query)
+        json_string += "{}\"top_{}_words\": [\n".format(indent(2), self.top_k)
         for i in range(len(word_scores)):
             (word, _) = word_scores[i]
-            json_string += "\"{}\"".format(word)
+            json_string += "{}\"{}\"".format(indent(3), word)
             if i < len(word_scores) - 1:
                 json_string += ","
             json_string += "\n"
-        json_string += "]"
-        json_string += "\n}\n}"
+        json_string += "{}]\n".format(indent(2))
+        json_string += "{}}}\n}}".format(indent(1))
         return json_string
+    
         
 
     

@@ -3,14 +3,14 @@ from nltk import tokenize, corpus
 import re
 from cleantext import clean
 
+### Represents a tweet from Twitter ###
 class Tweet:
-    # TODO: use __slots__ to decrease memory usage 
-
     def __init__(self, id, datestring, text):
         self.id = id
         self.datetime = datetime.strptime(datestring, "%Y-%m-%d %H:%M:%S")
         self.words = self._preprocess_text(text)
 
+    """ Preprocesses tweet text field to parse out words only """
     def _preprocess_text(self, text):
         text = re.sub(r'pic.twitter.com/\S+',"", text)
         text = clean(text,
@@ -35,9 +35,9 @@ class Tweet:
 
         words = tokenize.word_tokenize(text)
 
-        cleaned_words = []
+        important_words = []
         for w in words:
             if w not in corpus.stopwords.words("english"):
-                cleaned_words.append(w)
+                important_words.append(w)
   
-        return cleaned_words
+        return important_words

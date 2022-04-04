@@ -8,28 +8,22 @@ def test_incorrect_api_key():
 def test_correct_api_key():
     pass
 
-# Tests that algorithm returns correct fields in json output
+# Tests that algorithm returns correctly formatted json
 def test_json_format():
-    # stub out bigquery function call
+    pass
+
+# Tests that algorithm returns correct fields in json output
+def test_json_output():
     pass
 
 # Tests for correct error handling on timeout
 def test_timeout():
-    # stub out and timeout on bigquery function call
     pass
 
-# Tests that hardcoded small dataset returns expected ranking
-def test_size_10_ranking_order():
+# Tests that k words are returned when k is provided
+def test_size_k_response():
     pass
 
-# Tests that hardcoded medium dataset returns expected ranking
-def test_size_100_ranking_order():
-    pass
-
-# Tests that runtime does not exceed reasonable threshold
-def test_runtime_size_100k_dataset():
-    pass
-
-# Tests that some results are returned when query doesn't exist in dataset
+# Tests that an empty result is returned when query doesn't exist in dataset
 def test_query_not_in_dataset():
     pass
