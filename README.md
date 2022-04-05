@@ -32,7 +32,8 @@ Specifically, the association of `w` and `q` can be measured by two metrics:
 
 Let T represent the set of tweets in which `w` and `q` co-occur. To calculate the association score of `w` with `q`, we weight every co-occurrence of `w` and `q` with a recency score and normalize it by the number of occurrences of `q`: 
 
-$score(w, q) = \frac{\sum_{w \in T}(weight(w))}{count(q)}$
+<img src="https://latex.codecogs.com/svg.image?score(w,q)&space;=&space;\frac{\sum_{w&space;\in&space;T}weight(w)}{count(q)}">
+
 
 Each word `w` scored is only counted once per tweet, and only if it is not the query word. 
 
