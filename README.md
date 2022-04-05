@@ -37,7 +37,7 @@ Let T represent the set of tweets in which `w` and `q` co-occur. To calculate th
 
 Each word `w` scored is only counted once per tweet, and only if it is not the query word. 
 
-Instead of querying BigQuery directly for each input word, ~70k tweets are sampled randomly from the BigQuery table upon the first query and are cached for following queries. 
+Instead of querying BigQuery directly for each input word, ~80k tweets are sampled randomly from the BigQuery table upon the first query and are cached for following queries. 
 
 ## Setup
 ### Dependencies
